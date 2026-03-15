@@ -445,9 +445,8 @@ def save_yaml(filename, data):
 # ========================================
 # スプレッドシートから企業一覧を取得
 # ========================================
-# スプシのURL（公開設定 or サービスアカウント）
-# 方式1: CSV公開（簡易）— スプシを「ウェブに公開」→ CSV形式
-# 方式2: Google Sheets API（本番向け）— サービスアカウントJSON必要
+# 方式1: Google Sheets API（推奨）— Service AccountでOrgのスプシを非公開のまま読み込み
+# 方式2: CSV公開（簡易）— スプシを「ウェブに公開」→ CSV形式
 SPREADSHEET_CSV_URL = os.environ.get("COMPANY_SPREADSHEET_URL", "")
 if not SPREADSHEET_CSV_URL:
     try:
@@ -455,29 +454,79 @@ if not SPREADSHEET_CSV_URL:
     except Exception:
         pass
 
+# Google Sheets API用の設定
+GSHEET_SPREADSHEET_ID = ""
+GSHEET_SHEET_NAME = ""
+try:
+    GSHEET_SPREADSHEET_ID = st.secrets.get("GSHEET_SPREADSHEET_ID", "")
+    GSHEET_SHEET_NAME = st.secrets.get("GSHEET_SHEET_NAME", "Sheet1")
+except Exception:
+    pass
+
+USE_GSHEET_API = bool(GSHEET_SPREADSHEET_ID)
+
+
+def _get_gsheet_client():
+    """Google Sheets APIクライアントを取得（Service Account認証）"""
+    try:
+        import gspread
+        from google.oauth2.service_account import Credentials
+
+        # st.secretsからService Account情報を取得
+        sa_info = dict(st.secrets["gcp_service_account"])
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets.readonly",
+        ]
+        credentials = Credentials.from_service_account_info(sa_info, scopes=scopes)
+        return gspread.authorize(credentials)
+    except Exception as e:
+        st.warning(f"Google Sheets API認証エラー: {e}")
+        return None
+
 
 @st.cache_data(ttl=300)  # 5分キャッシュ
 def fetch_companies_from_spreadsheet():
     """スプレッドシートから企業一覧を取得する。
-    スプシの列: company_key, name, industry, cart_detection_pattern
+    スプシの列: company_key, name, industry
+    方式1: Google Sheets API（Service Account）
+    方式2: CSV公開URL
     """
-    if not SPREADSHEET_CSV_URL:
-        return None  # URL未設定 → ローカルフォルダから取得
+    # 方式1: Google Sheets API
+    if USE_GSHEET_API:
+        try:
+            gc = _get_gsheet_client()
+            if gc:
+                sh = gc.open_by_key(GSHEET_SPREADSHEET_ID)
+                ws = sh.worksheet(GSHEET_SHEET_NAME)
+                records = ws.get_all_records()
+                companies = []
+                for row in records:
+                    companies.append({
+                        "key": str(row.get("company_key", "")).strip(),
+                        "name": str(row.get("name", "")).strip(),
+                        "industry": str(row.get("industry", "")).strip(),
+                    })
+                return companies if companies else None
+        except Exception as e:
+            st.warning(f"Google Sheets API読み込みエラー: {e}")
 
-    try:
-        import pandas as pd
-        df = pd.read_csv(SPREADSHEET_CSV_URL)
-        companies = []
-        for _, row in df.iterrows():
-            companies.append({
-                "key": str(row.get("company_key", "")).strip(),
-                "name": str(row.get("name", "")).strip(),
-                "industry": str(row.get("industry", "")).strip(),
-            })
-        return companies
-    except Exception as e:
-        st.warning(f"スプシ読み込みエラー: {e}")
-        return None
+    # 方式2: CSV公開URL
+    if SPREADSHEET_CSV_URL:
+        try:
+            import pandas as pd
+            df = pd.read_csv(SPREADSHEET_CSV_URL)
+            companies = []
+            for _, row in df.iterrows():
+                companies.append({
+                    "key": str(row.get("company_key", "")).strip(),
+                    "name": str(row.get("name", "")).strip(),
+                    "industry": str(row.get("industry", "")).strip(),
+                })
+            return companies
+        except Exception as e:
+            st.warning(f"スプシ読み込みエラー: {e}")
+
+    return None
 
 
 def get_company_list():
