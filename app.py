@@ -1131,6 +1131,8 @@ if "last_requirements_output" not in st.session_state:
     st.session_state.last_requirements_output = ""
 if "uploaded_data_schemas" not in st.session_state:
     st.session_state.uploaded_data_schemas = {}
+if "handoff_in_progress" not in st.session_state:
+    st.session_state.handoff_in_progress = False
 
 
 def switch_agent(agent_key):
@@ -1146,6 +1148,39 @@ def reset_current_agent():
     st.session_state.initialized[agent_key] = False
 
 
+def check_requirements_completeness():
+    """要件定義の完成度をチェック。不足している項目リストを返す。空なら完成。"""
+    agent_key = "requirements"
+    chat_hist = st.session_state.chat_history.get(agent_key, [])
+
+    # 最後のassistant出力を取得
+    last_output = ""
+    for msg in reversed(chat_hist):
+        if msg["role"] == "assistant":
+            last_output = msg["content"]
+            break
+
+    if not last_output:
+        return ["要件定義がまだ開始されていません"]
+
+    # 必須セクションのチェック
+    required_sections = {
+        "配信対象条件": ["配信対象", "対象条件", "ターゲット"],
+        "配信タイミング": ["配信タイミング", "タイミング", "配信時間"],
+        "コンテンツ差込項目": ["コンテンツ差込", "差込項目", "差込"],
+        "除外条件": ["除外条件", "除外"],
+        "データ結合パス": ["データ結合", "結合パス", "JOIN"],
+    }
+
+    missing = []
+    for section_name, keywords in required_sections.items():
+        found = any(kw in last_output for kw in keywords)
+        if not found:
+            missing.append(section_name)
+
+    return missing
+
+
 def handoff_to_implementation():
     """要件定義の出力を保存して実装Agentに引き継ぐ"""
     # 要件定義の最後のassistant出力を保存
@@ -1155,6 +1190,8 @@ def handoff_to_implementation():
         if msg["role"] == "assistant":
             st.session_state.last_requirements_output = msg["content"]
             break
+    # 引き継ぎフラグを立てる（ローディング表示用）
+    st.session_state.handoff_in_progress = True
     # 実装Agentに切り替え
     st.session_state.current_agent = "implementation"
 
@@ -1179,16 +1216,29 @@ with st.sidebar:
             st.rerun()
     with col2:
         impl_style = "primary" if current == "implementation" else "secondary"
-        if st.button("🔧 実装", use_container_width=True, type=impl_style):
-            switch_agent("implementation")
-            st.rerun()
+        # 要件定義が完了していない場合は実装Agentに直接切り替え不可
+        has_requirements = bool(st.session_state.get("last_requirements_output", ""))
+        impl_disabled = (current != "implementation" and not has_requirements)
+        if st.button("🔧 実装", use_container_width=True, type=impl_style, disabled=impl_disabled):
+            if has_requirements:
+                switch_agent("implementation")
+                st.rerun()
+            else:
+                st.warning("先に要件定義を完了してください")
+        if impl_disabled:
+            st.caption("⚠️ 要件定義完了後に有効化")
 
-    # 実装Agentへの引き継ぎボタン
+    # 実装Agentへの引き継ぎボタン（要件定義画面のみ）
     if current == "requirements":
         st.divider()
-        if st.button("➡️ 実装Agentに引き継ぐ", use_container_width=True, type="primary"):
-            handoff_to_implementation()
-            st.rerun()
+        missing = check_requirements_completeness()
+        if missing:
+            st.button("➡️ 実装Agentに引き継ぐ", use_container_width=True, type="primary", disabled=True)
+            st.caption(f"⚠️ 未完了: {', '.join(missing)}")
+        else:
+            if st.button("➡️ 実装Agentに引き継ぐ", use_container_width=True, type="primary"):
+                handoff_to_implementation()
+                st.rerun()
 
     st.divider()
 
@@ -1307,6 +1357,22 @@ agent_config = AGENTS[current_agent]
 
 st.title(f"{agent_config['icon']} {agent_config['name']}")
 st.caption(agent_config["description"])
+
+# 引き継ぎローディング表示
+if current_agent == "implementation" and st.session_state.get("handoff_in_progress", False):
+    handoff_container = st.empty()
+    with handoff_container:
+        st.markdown("""
+        <div style="text-align: center; padding: 3rem 1rem;">
+            <div style="font-size: 48px; margin-bottom: 1rem;">📋 ➡️ 🔧</div>
+            <h2 style="color: #1a6b9c;">実装Agentに引き継いでいます...</h2>
+            <p style="color: #6b7280; font-size: 16px;">要件定義の内容を実装Agentに渡しています。しばらくお待ちください。</p>
+        </div>
+        """, unsafe_allow_html=True)
+    import time
+    time.sleep(2)
+    handoff_container.empty()
+    st.session_state.handoff_in_progress = False
 
 # 引き継ぎ状態の表示
 if current_agent == "implementation" and st.session_state.last_requirements_output:
