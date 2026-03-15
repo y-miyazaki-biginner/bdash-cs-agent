@@ -1,0 +1,379 @@
+# b→dash 構築操作ガイド
+# 実装Agentが参照する知識ファイル
+
+data_palette:
+  description: "データの統合・加工を行う機能。構築の最初のステップ。"
+  entry_path: "ホーム → データパレット → データを確認する"
+
+  yokotogo:
+    name: "横統合（JOIN）"
+    ref: "https://support.smart-bdash.com/start_setting/9594"
+    description: "共通カラムをキーとして2つのデータファイルを1つに結合"
+    join_types:
+      - type: "全データ"
+        description: "どちらかのファイルにしかないデータも含めてすべて保持（OUTER JOIN相当）"
+      - type: "共通データのみ"
+        description: "両方のファイルに存在するレコードのみ保持（INNER JOIN相当）"
+      - type: "先に選択したデータに対して"
+        description: "共通データ＋ファイル1のみのデータを保持（LEFT JOIN相当）"
+      - type: "後に選択したデータに対して"
+        description: "共通データ＋ファイル2のみのデータを保持（RIGHT JOIN相当）"
+    steps:
+      - "データパレット → データを確認する → 統合する をクリック"
+      - "カスタマイズ を選択して適用"
+      - "統合するファイル2つを選択"
+      - "統合方法を選択"
+      - "統合カラム（キー）を指定"
+      - "保持カラムを選択"
+      - "重複レコードの処理方法を設定"
+      - "更新頻度を設定 → 統合を実行"
+    notes:
+      - "3つ以上のファイルは同時に統合できない。複数ファイルの統合は横統合を2回実行する"
+      - "統合キーカラムに空値や重複値があると意図しない結果になる可能性がある"
+      - "データファイルの差し替えは下流の施策に影響する場合がある"
+
+  tatetogo:
+    name: "縦統合（UNION）"
+    ref: "https://support.smart-bdash.com/start_setting/9595"
+    description: "異なるデータファイル同士で共通するカラムのレコードを縦方向に結合"
+    steps:
+      - "データパレット → データを確認する → 統合する をクリック"
+      - "カスタマイズ を選択して適用"
+      - "統合したいデータファイルを選択（最大4つ）"
+      - "マージアイコンをクリックし統合方法を選択"
+      - "統合カラム名を入力し、統合に使用するカラムを指定"
+      - "重複データの設定（除外する/除外しない）（UNIONかUNION ALLかを）を選択"
+      - "出力ファイル名を入力し、更新設定を行い保存"
+    notes:
+      - "1回の統合で最大4ファイルまで同時選択可能"
+      - "重複データ「除外する」= 同一レコード除去、「除外しない」= 値の合算が必要な場合"
+      - "データ型が一致するカラムのみマッピング可能"
+
+  cleansing:
+    description: "データの加工・変換を行う。統合とは別の設定画面で実行。"
+    entry_path: "対象ファイルを選択 → 加工する をクリック"
+    common_notes:
+      - "上書き保存は過去に1回以上クレンジングを行ったファイルのみ対象"
+      - "新規インポートや統合ファイルは「新規データファイルとして保存」のみ"
+      - "更新設定で自動実行（スケジュール or データ更新時トリガー）が可能"
+
+    operations:
+      renketsu:
+        name: "連結"
+        ref: "https://support.smart-bdash.com/start_setting/4425"
+        description: "複数カラムを結合して1つのカラムを作成（例：姓+名→氏名）"
+        notes:
+          - "テキスト挿入ボタンでカラム間に区切り文字を挿入可能（例：/）"
+          - "元カラムの残す/残さないを選択可能"
+
+      text_insert:
+        name: "テキスト挿入"
+        ref: "https://support.smart-bdash.com/start_setting/4426"
+        description: "カラムの文頭または文末に任意のテキストを挿入"
+        notes:
+          - "名前をつけて保存 = 元カラム保持、上書き保存 = 元カラム削除"
+
+      bunkatsu:
+        name: "分割"
+        ref: "https://support.smart-bdash.com/start_setting/4644"
+        description: "カラムを任意の位置で分割し新しいカラムを作成（例：日付→年/月/日）"
+        settings:
+          - "区切り文字"
+          - "開始位置"
+          - "分割数"
+        notes:
+          - "小数型カラムを.で分割した場合、小数点以下がない値は空白になる"
+          - "分割は1回の加工あたり10個までしか分割できない"
+
+      shisoku_enzan:
+        name: "四則演算"
+        ref: "https://support.smart-bdash.com/start_setting/4645"
+        description: "カラムに対して加算・減算・乗算・除算を行い新しいカラムを生成"
+        operators: ["+", "-", "x", "÷"]
+        rounding: ["四捨五入", "切り捨て", "切り上げ"]
+        decimal_digits: "1〜4桁"
+        notes:
+          - "NULL値を含むカラムの計算結果は整数型のNULLになる"
+          - "整数型、少数型の種類のカラムしか選べない"
+          - "1回の加工で、最大2つのカラムしか選べない"
+
+      jikoku_enzan:
+        name: "時刻演算"
+        ref: "https://support.smart-bdash.com/start_setting/4646"
+        description: "日付・日時データに対して加算・減算を行い、日数差や時間差を計算"
+        supported_types: ["日付型", "日時型", "整数型"]
+        fixed_value_options: ["本日の日付", "任意", "指定日"]
+        notes:
+          - "NULL値を含む場合、演算結果もNullになる。事前確認が必要"
+          - "左右の値を入れ替えるアイコンあり（負の値回避用）"
+          - "日付型、日時型の種類のカラムしか選べない"
+          - "1回の加工で、最大2つのカラムしか選べない"
+
+      if_bun:
+        name: "IF文"
+        ref: "https://support.smart-bdash.com/start_setting/4647"
+        description: "条件に基づいて値を変換（条件分岐による値変換）"
+        example: "購入金額 < 5万→ブロンズ, 5万〜10万→シルバー, 10万以上→ゴールド"
+        notes:
+          - "複数の分岐条件を追加可能"
+          - "条件に合致しないレコードのデフォルト値を設定"
+          - "作成されたカラムはテキスト型で、カラム名はIF文になる"
+
+      tsuika:
+        name: "カラム追加"
+        ref: "https://support.smart-bdash.com/start_setting/4648"
+        description: "データファイル内の任意の位置に新しいカラムを追加"
+        notes:
+          - "データ型を日付/日時にすると加工処理実行日の自動入力チェックボックスが表示され、加工処理が実装された時間を格納することができる"
+          - "追加位置は「左に追加」「右に追加」から選択"
+
+      fukusei:
+        name: "カラム複製"
+        ref: "https://support.smart-bdash.com/start_setting/4649"
+        description: "選択したカラムと同一のカラムを作成（加工前のバックアップ用途）"
+
+      sakujo:
+        name: "カラム削除"
+        ref: "https://support.smart-bdash.com/start_setting/4650"
+        description: "選択したカラムをデータファイルから削除"
+        notes:
+          - "複数カラムの一括削除が可能"
+
+      ranking:
+        name: "ランキング"
+        ref: "https://support.smart-bdash.com/start_setting/4652"
+        description: "カラムのデータを順位付け（大きい/小さい順、早い/遅い順など）"
+        patterns: ["単一カラム", "グループ別"]
+        notes:
+          - "レコード数によっては昇順表示が正しくないケースあり"
+          - "値が重複したときに、同率で順位飛ばしで連番を振るか（1,1,2か1,1,3どちらの形式でも順位付け可能）、順位飛ばしなしでランダムで順位をつかえるか選択可能"
+
+      shuyaku:
+        name: "集約"
+        ref: "https://support.smart-bdash.com/start_setting/4653"
+        description: "特定カラムでグループ化し、合計・平均・最大値等を算出"
+        methods:
+          - "カウント"
+          - "ユニークカウント"
+          - "合計"
+          - "平均"
+          - "最大値"
+          - "最小値"
+          - "最新"
+          - "最古"
+          - "行連結（区切り文字設定可）"
+          - "SQLのgroup byに相当"
+
+      chikan:
+        name: "置換"
+        ref: "https://support.smart-bdash.com/start_setting/4654"
+        description: "カラムの値を変換（例：NULL値を0に変換）"
+
+      kata_henkan:
+        name: "型変換"
+        ref: "https://support.smart-bdash.com/start_setting/4655"
+        description: "カラムのデータ型を別の型に変換（例：テキスト→日付型）"
+        notes:
+          - "空文字は自動的にNULLに変換される"
+          - "日付・日時変換に対応する元フォーマットは33種類以上"
+
+      chushutsu:
+        name: "文字抽出"
+        ref: "https://support.smart-bdash.com/start_setting/4656"
+        description: "カラムから特定の値を抽出"
+
+      jogai:
+        name: "文字除外"
+        ref: "https://support.smart-bdash.com/start_setting/4657"
+        description: "カラムから特定の値を削除（例：日付から年を除外し月日のみ取得）"
+
+      shoshiki_henkan:
+        name: "書式変換"
+        ref: "https://support.smart-bdash.com/start_setting/4658"
+        description: "全角/半角、大文字/小文字の変換"
+        notes:
+          - "全角⇔半角の記号変換は28種類の記号に対応"
+
+      zero_ume:
+        name: "0埋め"
+        ref: "https://support.smart-bdash.com/start_setting/4659"
+        description: "値の先頭にゼロを追加し指定桁数に統一"
+
+      shiborикomi:
+        name: "絞込み"
+        ref: "https://support.smart-bdash.com/start_setting/4660"
+        description: "指定条件でデータをフィルタリング"
+        logic:
+          - "AND条件（すべて一致）"
+          - "OR条件（いずれか一致）"
+          - "複数AND条件をグループ化しOR条件で組み合わせ可能"
+
+      nayose:
+        name: "名寄せ（重複排除）"
+        ref: "https://support.smart-bdash.com/start_setting/4661"
+        description: "指定カラムの値が同一の重複レコードから優先順位に基づいて1レコードのみ残す"
+        notes:
+          - "優先条件を設定しない場合、どのレコードが残るかはランダム"
+
+      sansho:
+        name: "参照"
+        ref: "https://support.smart-bdash.com/start_setting/31463"
+        description: "グループ内でデータをソートし特定の値を表示"
+        reference_types:
+          - "グループ内の最初の値"
+          - "グループ内の最後の値"
+          - "指定位置の値"
+          - "前の行の値"
+          - "次の行の値"
+          - "累計値"
+        example: "顧客IDでグループ化 → 購入日で昇順ソート → 各顧客の初回購入店舗を抽出"
+
+      column_sort:
+        name: "カラム並び替え"
+        ref: "https://support.smart-bdash.com/start_setting/46059"
+        description: "データファイル内のカラムの表示順序を変更"
+        notes:
+          - "並び替えは下流のデータファイルや施策には影響しない"
+
+segment:
+  description: "特定の条件に基づいて顧客グループを抽出・作成する機能"
+  entry_path: "セグメント → 新規作成"
+  ref: "https://support.smart-bdash.com/start_setting/9599"
+
+  creation_methods:
+    template:
+      name: "テンプレートから作成"
+      description: "あらかじめ用意されたテンプレートを選択（初心者向け）"
+    customize:
+      name: "カスタマイズから作成"
+      description: "データファイルや条件を自由に手動設定"
+      types: ["単一セグメント", "複合セグメント"]
+
+  steps:
+    - "セグメント → 新規作成 をクリック"
+    - "テンプレートまたはカスタマイズを選択"
+    - "データファイルを選び、顧客IDカラム（テキスト形式のみ）を指定"
+    - "抽出条件を設定（AND/OR条件を組み合わせ）"
+    - "セグメントを保存"
+
+  settings:
+    - "条件ブロック間のAND/OR切り替え"
+    - "データファイル更新時に集計を実行するチェックボックス"
+    - "定期更新スケジュールの設定"
+    - "抽出期間：絶対期間（特定日付）またはアップデート日基準の相対期間"
+    - "最大10階層までの条件ブロックのネスト"
+
+  notes:
+    - "一度設定した顧客IDカラムはそのセグメントでは変更できない"
+    - "セグメント作成後、元のデータファイルは差し替えできない。別ファイルを使う場合は新規セグメント作成"
+    - "データファイルとセグメントの更新スケジュールが同じ場合、セグメントのデータは更新前のファイル内容が反映される"
+
+  composite_segment:
+    name: "複合セグメント"
+    ref: "https://support.smart-bdash.com/start_setting/13188"
+    description: "同じセグメントIDを持つ複数のセグメントをAND/OR/除外で組み合わせ"
+    operations:
+      - type: "AND条件"
+        description: "共通部分の抽出"
+      - type: "OR条件（追加）"
+        description: "いずれかに該当する顧客を抽出"
+      - type: "除外（NOT）"
+        description: "特定セグメントに該当する顧客を除外"
+    steps:
+      - "セグメント → 新規作成 → カスタマイズ → 複合セグメント を選択"
+      - "ベースとなるセグメントを選択"
+      - "AND条件/除外 で組み合わせるセグメントを選択"
+      - "定期更新を設定して保存"
+    notes:
+      - "セグメントID同士が一致していないと除外が機能しない"
+      - "抽出件数はレコード数ではなくユニーク値で集計される"
+      - "同一データファイルからのセグメント組み合わせ時、メールカラムは1つに制限される"
+
+scenario:
+  description: "シナリオベースのメール・メッセージ配信（MA）を設定・管理する機能"
+  ref: "https://support.smart-bdash.com/utilization/6466"
+
+  steps:
+    - step: 1
+      name: "配信データの選択"
+      tasks:
+        - "対象セグメント/データファイルを選択"
+        - "配信先カラムを選択（最大5カラム）"
+        - "複数メールアドレスがある場合は優先順位を設定"
+        - "除外データファイルを選択（デフォルト：配信不能データ、オプトアウトフォームデータ、配信停止データ）"
+    - step: 2
+      name: "配信タイミングの設定"
+      tasks:
+        - "トリガータイミング：1回限り、繰り返し、イベントベース"
+        - "同一顧客への再配信 ON/OFF 設定"
+        - "イベントトリガー：ページ閲覧、ドメインアクセス、コンバージョン"
+        - "インターバル配信（例：3日ごと）"
+    - step: 3
+      name: "シナリオワークフローの構築"
+      task_types:
+        action_task:
+          name: "アクションタスク"
+          types: ["メール配信", "LINE配信", "プッシュ通知", "SMS配信", "スタッフ通知"]
+        wait_task:
+          name: "ウェイトタスク"
+          options: ["1～100日", "1～240時間", "指定日時まで待機"]
+        branch_task:
+          name: "分岐タスク"
+          types:
+            - "開封/未開封分岐"
+            - "ABテスト分岐（割合指定）"
+            - "コンバージョン分岐"
+            - "クリック分岐"
+            - "セグメント分岐"
+            - "データファイル分岐"
+            - "カスタム分岐"
+        merge_task:
+          name: "統合タスク"
+          description: "分岐したパスを統合"
+    - step: 4
+      name: "運用期間の設定"
+      tasks: ["開始日・終了日を定義"]
+    - step: 5
+      name: "設定内容の確認"
+      tasks: ["セグメント、配信先、アクションタスクを確認"]
+    - step: 6
+      name: "運用開始"
+      tasks: ["ステータスを停止中から運用中に切り替え"]
+
+  notes:
+    - "メールアドレス・差出人アドレス・挿入データに制御文字が含まれるユーザーは配信から除外される"
+    - "運用終了ステータスのシナリオは再開できない。再開するにはシナリオを複製する"
+    - "配信対象はトリガー実行時に確定され、その後のセグメント変更は既にキャプチャされたユーザーには影響しない"
+    - "配信制御設定でブロックされた場合、後続タスクも実行されない"
+    - "同一顧客IDで複数メールアドレスがある場合、最新レコードのメールアドレスが配信に使用される"
+
+construction_flow:
+  description: "要件定義から構築までの標準的な流れ"
+  steps:
+    - step: 1
+      name: "データパレット/加工"
+      tasks:
+        - "必要なテーブルのJOIN（横統合）"
+        - "必要に応じてUNION（縦統合）"
+        - "クレンジング（フィルタ、カラム変換、カラム挿入等）"
+        - "セグメント抽出用データの作成"
+        - "コンテンツ差込項目の作成"
+    - step: 2
+      name: "セグメント作成"
+      tasks:
+        - "対象条件をセグメントとして設定"
+        - "除外条件をセグメントとして設定"
+    - step: 3
+      name: "メール作成"
+      tasks:
+        - "テンプレート選択"
+        - "差込項目の設定"
+    - step: 4
+      name: "シナリオ設定"
+      tasks:
+        - "配信タイミングの設定（トリガー/スケジュール）"
+        - "配信対象外データの設定"
+    - step: 5
+      name: "テスト配信"
+      tasks:
+        - "テスト用アドレスへの送信確認"

@@ -1,0 +1,79 @@
+company:
+  name: テンプレEC企業
+  industry: エンタメ
+  site_type: ECサイト（CD・DVD・グッズ等）
+  channels:
+  - メール
+data_rules:
+  cart_detection:
+    pattern: cart_add_click
+    cart_page_url_pattern: ''
+    cart_add_element_class: add-to-cart-btn
+    note: カート投入してもカートページに遷移しないサイトのため②を採用
+relation_mapping:
+  リレーション項目_1:
+    content: 顧客ID
+    fk: customers.customer_id
+  リレーション項目_2:
+    content: 受注ID
+    fk: orders.order_id
+  リレーション項目_7:
+    content: 商品ID
+    fk: products.product_id
+  リレーション項目_10:
+    content: ''
+    fk: ''
+global_exclusions:
+- id: 1
+  condition: メルマガ未許諾
+  table: customers
+  column: mail_permission
+  logic: = FALSE のユーザーを除外
+operational_rules:
+- メール配信可能時間帯は10:00〜19:00
+- 時間外の配信は翌日10:00に繰り越し
+past_campaigns:
+- - campaign: 全般
+    feedback: テーブル構造やカラム名について不明な場合は、ユーザーに質問する前にまずデータ定義ファイル（data_definition.yml）を確認すること。データ定義に存在しないテーブル・カラムについてのみユーザーに確認する。
+    date: 2025-01-01
+    action: 運用ルールとして適用
+implementation_feedback:
+- - campaign: 関連商品レコメンドメール
+    feedback: '【重要】関連商品分析の正しいロジック実装方法：
+
+
+      ■ b→dashでの自己結合による商品ペア分析手順
+
+      1. 商品閲覧データ同士をセッションIDで横統合（全データ）
+
+      2. IF文でproduct_id = product_idなら"1"、それ以外なら空白
+
+      3. 空白のみ絞り込み（異なる商品ペアのみ抽出）
+
+      4. product_id, product_idでグループ集約してwebアクセスログIDをカウント
+
+      5. product_idでグループ別ランキング（カウント数降順）
+
+
+      ■ 配信データ作成の正しい手順
+
+      1. webアクセスログ + 顧客データ統合 → 顧客別最終閲覧商品データ作成
+
+      2. 関連商品ランキングデータ + productデータ横統合 → 商品情報付きランキング
+
+      3. 行結合でproduct_idキー、ランキング順結合
+
+      4. 上記2データを横統合して最終配信データ作成
+
+
+      ■ b→dash制約事項
+
+      - 異なるファイルのカラム同士の比較条件（ファイル1.product_id ≠ ファイル2.product_id）は絞り込み条件で直接指定不可
+
+      - IF文による条件分岐後の絞り込みが必要
+
+      - 基本データ統合（customers統合）は不要で直接商品閲覧データから開始
+
+      '
+    date: 2025-01-27
+    action: b→dash制約を考慮した実装手順として記録

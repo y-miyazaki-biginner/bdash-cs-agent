@@ -1,0 +1,339 @@
+samples:
+- campaign:
+    name: カート投入後未購入フォローメール
+    description: カート投入後に未購入者に対してフォローメール配信
+  target_conditions:
+  - id: 1
+    condition: ログイン済みユーザー
+    table: web_access_log
+    column: リレーション項目_1
+    logic: IS NOT NULL
+  - id: 2
+    condition: カート投入済み
+    table: web_access_log
+    column: ページURL
+    logic: カートページURLパターンに合致するPVログが存在
+    alt_pattern:
+      table: web_access_log
+      column: イベント発生要素class
+      logic: PV/Click='click' かつ カート追加ボタン要素を特定
+  - id: 3
+    condition: 未購入
+    table: web_access_log + orders + order_details
+    column: customer_id × product_id
+    logic: 'web_access_log（カート投入）のcustomer_id × product_id MINUS orders（order_status=''COMPLETED''）に紐づく
+      order_detailsのcustomer_id × product_id
+
+      '
+  - id: 4
+    condition: カート投入からの経過時間
+    table: web_access_log
+    column: PV/Click日時（カート投入時のもの）
+    logic: 現在時刻 - PV/Click日時 >= 3時間（1回目）/ 2日（2回目）
+  delivery_timing:
+  - round: 1
+    timing: カート投入から3時間後
+    allowed_hours: 10:00〜19:00
+    overflow_rule: 時間外は翌日10:00に繰り越し
+  - round: 2
+    timing: カート投入から2日後
+    condition: 1回目メール未開封者のみ
+    allowed_hours: 10:00〜19:00
+    overflow_rule: 時間外は翌日10:00に繰り越し
+  content_inserts:
+    max_items: 10
+    sort_order: PV/Click日時 降順（直近投入順）
+    items:
+    - id: 1
+      label: 姓
+      table: customers
+      column: last_name
+      note: 宛名用
+    - id: 2
+      label: 商品画像
+      table: products
+      column: image_url
+      note: カート投入商品のもの
+    - id: 3
+      label: 商品名
+      table: products
+      column: product_name
+    - id: 4
+      label: 販売終了日時
+      table: products
+      column: sale_end_at
+    - id: 5
+      label: 商品URL
+      table: products
+      column: product_url
+    - id: 6
+      label: アーティスト名
+      table: products
+      column: artist_name
+    - id: 7
+      label: 特典有無
+      table: products
+      column: has_bonus
+      note: TRUE → 「特典あり」ボタン表示
+  exclusion_conditions:
+    campaign_specific:
+    - id: 1
+      condition: カート投入商品を購入済み
+      table: orders + order_details
+      column: customer_id, product_id
+      logic: 当日（配信日）にCOMPLETED注文が存在する場合は除外
+    - id: 2
+      condition: 在庫切れ商品
+      table: products
+      column: stock_quantity
+      logic: < 1 の商品は差込対象から除外。全商品が在庫切れの場合は配信自体を除外
+    from_global:
+    - ref: global_exclusions
+      note: メルマガ未許諾など、全施策共通の除外条件が自動で適用される
+  data_join_path:
+  - join: customers → web_access_log
+    true: customers.customer_id = web_access_log.リレーション項目_1
+  - join: web_access_log → products
+    true: web_access_log.リレーション項目_7 = products.product_id
+  - join: customers → orders (LEFT)
+    true: customers.customer_id = orders.customer_id
+  - join: orders → order_details (LEFT)
+    true: orders.order_id = order_details.order_id
+  open_questions:
+  - id: 1
+    question: カート投入の取得方式はパターン①（カートページPV型）か②（カート追加Click型）か？
+    impact: 参照するカラムとロジックが変わる
+  - id: 2
+    question: 「当日はCVしたかどうかで判断する」→ 当日=配信日の0:00〜23:59で判定する認識でよいか？
+    impact: 除外条件の時間範囲に影響
+  - id: 3
+    question: 2回目配信の「未開封者」→ メール開封ログの取得元を別途確認が必要
+    impact: 2回目配信の対象者抽出に必要
+  - id: 4
+    question: 商品が10件を超える場合の優先順位は直近投入順でよいか？
+    impact: コンテンツ差込のソート順
+  - id: 5
+    question: 在庫切れ判定のタイミングは配信実行時リアルタイムか、日次バッチ時点の在庫か？
+    impact: 除外条件の精度
+- campaign:
+    name: 会員登録翌日 誕生日入力促進メール
+    description: 会員登録翌日に誕生日の入力がないユーザーに対して入力を促すメール配信
+  target_conditions:
+  - id: 1
+    condition: 会員登録翌日
+    table: customers
+    column: registered_at
+    logic: CURRENT_DATE - DATE(registered_at) = 1（登録日の翌日）
+  - id: 2
+    condition: 誕生日未入力
+    table: customers
+    column: birth_date
+    logic: IS NULL
+  delivery_timing:
+  - round: 1
+    timing: 日次 11:00
+    allowed_hours: '11:00'
+    overflow_rule: なし（日次バッチで11:00固定配信）
+  content_inserts:
+    max_items: 1
+    sort_order: null
+    items:
+    - id: 1
+      label: 姓
+      table: customers
+      column: last_name
+      note: 宛名用
+  exclusion_conditions:
+    campaign_specific: []
+    from_global:
+    - ref: global_exclusions
+      note: メルマガ未許諾など、全施策共通の除外条件が自動で適用される
+  data_join_path:
+  - join: customers のみ
+    true: 単一テーブルで完結
+  open_questions:
+  - id: 1
+    question: 誕生日入力ページへの導線URLをコンテンツに含めるか？
+    impact: content_insertsにURL差込が追加になる
+  - id: 2
+    question: 登録翌日だけでなく、N日後にリマインドを送るか？
+    impact: delivery_timingにround 2以降が追加になる
+  - id: 3
+    question: 既に誕生日入力済みだが空文字の場合の扱いは？（NULL vs 空文字）
+    impact: target_conditionsのロジックが変わる（IS NULL vs IS NULL OR = ''）
+- campaign:
+    name: カート投入商品 値下げ通知メール
+    description: 過去30日間にカート投入された商品のうち、前日比で値下げがあった商品をメールで通知する
+  target_conditions:
+  - id: 1
+    condition: ログイン済みユーザー
+    table: web_access_log
+    column: リレーション項目_1
+    logic: IS NOT NULL
+  - id: 2
+    condition: 過去30日以内にカート投入あり
+    table: web_access_log
+    column: PV/Click, イベント発生要素class, PV/Click日時
+    logic: PV/Click = 'click' かつ イベント発生要素class = 'add-to-cart-btn' かつ PV/Click日時が過去30日以内
+  - id: 3
+    condition: カート投入商品に値下げあり
+    table: products, AAAデータ
+    column: products.price, AAAデータ.前日価格
+    logic: AAAデータ.前日価格 > products.price（1円以上の差があれば値下げと判定）
+  delivery_timing:
+  - round: 毎日
+    timing: 日次バッチ
+    allowed_hours: '14:00'
+    overflow_rule: なし（10:00〜19:00の範囲内）
+    note: 同一ユーザーへの繰り返し配信あり
+  content_inserts:
+    max_items: 4
+    sort_order: PV/Click日時 降順（カート投入が新しい順）
+    items:
+    - id: 1
+      label: 商品画像
+      table: products
+      column: image_url
+      note: メール内で画像表示用
+    - id: 2
+      label: 商品名
+      table: products
+      column: product_name
+    - id: 3
+      label: 値下げ前価格
+      table: AAAデータ
+      column: 前日価格
+    - id: 4
+      label: 値下げ後価格
+      table: products
+      column: price
+      note: 現在の販売価格
+    - id: 5
+      label: 商品URL
+      table: products
+      column: product_url
+      note: 商品ページへの遷移リンク
+  exclusion_conditions:
+    campaign_specific:
+    - id: 1
+      condition: カート投入商品を購入済み
+      table: orders, order_details
+      column: customer_id, order_status, product_id
+      logic: カート投入商品と同一product_idでorder_status = 'COMPLETED' の注文が存在する場合、その商品を除外。全商品が購入済みの場合は配信自体を除外
+    - id: 2
+      condition: 在庫切れ商品
+      table: products
+      column: stock_quantity
+      logic: stock_quantity < 1 の商品は差込対象から除外。全商品が在庫切れの場合は配信自体を除外
+    from_global:
+    - ref: global_exclusions
+      note: メルマガ未許諾（customers.mail_permission = FALSE）を自動適用
+  data_join_path:
+  - join: customers → web_access_log
+    true: customers.customer_id = web_access_log.リレーション項目_1
+  - join: web_access_log → products
+    true: web_access_log.リレーション項目_7 = products.product_id
+  - join: products → AAAデータ
+    true: products.product_id = AAAデータ.product_id
+  - join: customers → orders (LEFT)
+    true: customers.customer_id = orders.customer_id
+  - join: orders → order_details (LEFT)
+    true: orders.order_id = order_details.order_id
+- campaign:
+    name: 前日閲覧商品の関連商品訴求メール
+    description: 前日に商品を閲覧したユーザーに対し、その商品と一緒によく見られている商品を訴求するレコメンドメール
+  target_conditions:
+  - id: 1
+    condition: 顧客ID取得可能ユーザー
+    table: web_access_log, IDマッピング
+    column: リレーション項目_1, ビジターID
+    logic: リレーション項目_1 IS NOT NULL OR (ビジターID経由でIDマッピングから顧客ID取得可能)
+  - id: 2
+    condition: 前日商品閲覧あり
+    table: web_access_log
+    column: PV/Click, ページURL, PV/Click日時
+    logic: PV/Click = 'PageView' AND ページURL LIKE '%/product/%' AND DATE(PV/Click日時)
+      = CURRENT_DATE - 1
+  - id: 3
+    condition: 関連商品が1つ以上存在
+    table: web_access_log（全期間）
+    column: セッションID, リレーション項目_7
+    logic: セッション内商品分析により関連商品を抽出、在庫・購入済み除外後に1件以上残る
+  delivery_timing:
+  - round: 1
+    timing: 毎日18:00
+    allowed_hours: '18:00'
+    overflow_rule: なし（運用時間帯内）
+  content_inserts:
+    max_items: 6
+    sort_order: セッション内出現頻度順（関連商品）
+    items:
+    - id: 1
+      label: 顧客姓
+      table: customers
+      column: last_name
+      note: 宛名用
+    - id: 2
+      label: 昨日閲覧商品名
+      table: products
+      column: product_name
+      note: 前日最後に閲覧した商品
+    - id: 3
+      label: 昨日閲覧商品画像
+      table: products
+      column: image_url
+      note: 前日最後に閲覧した商品
+    - id: 4
+      label: 関連商品名（5件）
+      table: products
+      column: product_name
+      note: セッション内出現頻度順
+    - id: 5
+      label: 関連商品画像（5件）
+      table: products
+      column: image_url
+      note: セッション内出現頻度順
+    - id: 6
+      label: 関連商品URL（5件）
+      table: products
+      column: product_url
+      note: 商品ページへのリンク
+  exclusion_conditions:
+    campaign_specific:
+    - id: 1
+      condition: 昨日閲覧商品を購入済み
+      table: orders, order_details
+      column: customer_id, product_id, order_status
+      logic: 前日閲覧商品のproduct_idでorder_status = 'COMPLETED'の注文が存在する場合、配信対象から除外
+    - id: 2
+      condition: 関連商品を購入済み
+      table: orders, order_details
+      column: customer_id, product_id, order_status
+      logic: 関連商品候補のうち、order_status = 'COMPLETED'の商品は差込対象から除外
+    - id: 3
+      condition: 在庫切れ関連商品
+      table: products
+      column: stock_quantity
+      logic: stock_quantity < 1 の商品は差込対象から除外
+    from_global:
+    - ref: global_exclusions
+      note: メルマガ未許諾（customers.mail_permission = FALSE）を自動適用
+  data_join_path:
+  - join: customers → IDマッピング
+    true: customers.customer_id = IDマッピング.顧客ID
+  - join: IDマッピング → web_access_log
+    true: IDマッピング.ビジターID = web_access_log.ビジターID
+  - join: web_access_log → products
+    true: web_access_log.リレーション項目_7 = products.product_id
+  - join: customers → orders (LEFT)
+    true: customers.customer_id = orders.customer_id
+  - join: orders → order_details (LEFT)
+    true: orders.order_id = order_details.order_id
+  special_logic:
+    related_products_extraction: '1. 前日閲覧商品Aを特定（PV/Click日時 降順で最後の商品）
+
+      2. 全期間のweb_access_logから商品Aを閲覧した全セッションを抽出
+
+      3. それらのセッション内で商品A以外に閲覧された商品の出現回数を集計
+
+      4. 出現回数順で関連商品を決定（最大5件、在庫・購入済み除外後）'

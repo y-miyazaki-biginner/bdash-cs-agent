@@ -1,0 +1,6 @@
+anthropic
+pyyaml
+streamlit
+requests
+pandas
+openpyxl

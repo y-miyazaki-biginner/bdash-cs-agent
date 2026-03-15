@@ -1,0 +1,441 @@
+company:
+  name: テンプレ企業
+  industry: エンタメ系EC
+  site_type: ECサイト（CD・DVD・グッズ等）
+  membership: 会員制（要ログイン）
+  channels:
+    - メール
+
+# テーブル定義
+# 同じ意味を持つテーブルが複数存在する場合は、別エントリとして定義し
+# similar_to で関連を示す。Agentはどちらを使うか勝手に決めず、ユーザーに確認する。
+# メタ情報（created_at, usage_count等）はAgentがデータ選択の比較時に使用する。
+
+tables:
+  customers:
+    description: 顧客データ
+    columns:
+      - name: customer_id
+        type: VARCHAR
+        description: 顧客ID
+        pk: true
+      - name: last_name
+        type: VARCHAR
+        description: 姓
+      - name: first_name
+        type: VARCHAR
+        description: 名
+      - name: last_name_kana
+        type: VARCHAR
+        description: 姓（カナ）
+      - name: first_name_kana
+        type: VARCHAR
+        description: 名（カナ）
+      - name: email
+        type: VARCHAR
+        description: メールアドレス
+      - name: phone
+        type: VARCHAR
+        description: 電話番号
+      - name: gender
+        type: VARCHAR
+        description: 性別
+        values: [M, F, OTHER]
+      - name: birth_date
+        type: DATE
+        description: 生年月日
+      - name: postal_code
+        type: VARCHAR
+        description: 郵便番号
+      - name: prefecture
+        type: VARCHAR
+        description: 都道府県
+      - name: city
+        type: VARCHAR
+        description: 市区町村
+      - name: address
+        type: VARCHAR
+        description: 番地以降
+      - name: member_rank
+        type: VARCHAR
+        description: 会員ランク
+        values: [REGULAR, SILVER, GOLD, PLATINUM]
+      - name: registered_at
+        type: TIMESTAMP
+        description: 会員登録日時
+      - name: last_login_at
+        type: TIMESTAMP
+        description: 最終ログイン日時
+      - name: mail_permission
+        type: BOOLEAN
+        description: メルマガ配信許諾（TRUE=許諾）
+      - name: line_permission
+        type: BOOLEAN
+        description: LINE配信許諾
+      - name: is_active
+        type: BOOLEAN
+        description: 有効会員フラグ
+
+  orders:
+    description: 受注データ
+    columns:
+      - name: order_id
+        type: VARCHAR
+        description: 受注ID
+        pk: true
+      - name: customer_id
+        type: VARCHAR
+        description: 顧客ID
+        fk: customers.customer_id
+      - name: order_status
+        type: VARCHAR
+        description: 受注ステータス
+        values: [COMPLETED, CANCELLED, RETURNED]
+      - name: order_date
+        type: TIMESTAMP
+        description: 注文日時
+      - name: payment_method
+        type: VARCHAR
+        description: 決済方法
+        values: [CREDIT, CONVENIENCE, BANK, COD]
+      - name: total_amount
+        type: INTEGER
+        description: 合計金額（税込）
+      - name: discount_amount
+        type: INTEGER
+        description: 割引金額
+      - name: shipping_fee
+        type: INTEGER
+        description: 送料
+      - name: shipped_at
+        type: TIMESTAMP
+        description: 出荷日時
+      - name: delivered_at
+        type: TIMESTAMP
+        description: 配達完了日時
+
+  order_details:
+    description: 受注明細データ
+    columns:
+      - name: order_detail_id
+        type: VARCHAR
+        description: 受注明細ID
+        pk: true
+      - name: order_id
+        type: VARCHAR
+        description: 受注ID
+        fk: orders.order_id
+      - name: product_id
+        type: VARCHAR
+        description: 商品ID
+        fk: products.product_id
+      - name: quantity
+        type: INTEGER
+        description: 数量
+      - name: unit_price
+        type: INTEGER
+        description: 単価（税込）
+      - name: subtotal
+        type: INTEGER
+        description: 小計（unit_price × quantity）
+
+  products:
+    description: 商品データ
+    columns:
+      - name: product_id
+        type: VARCHAR
+        description: 商品ID
+        pk: true
+      - name: product_name
+        type: VARCHAR
+        description: 商品名
+      - name: category
+        type: VARCHAR
+        description: カテゴリ
+        values: [CD, DVD, BLU-RAY, GOODS, TICKET]
+      - name: artist_name
+        type: VARCHAR
+        description: アーティスト名
+      - name: price
+        type: INTEGER
+        description: 販売価格（税込）
+      - name: cost
+        type: INTEGER
+        description: 原価
+      - name: image_url
+        type: VARCHAR
+        description: 商品画像URL
+      - name: product_url
+        type: VARCHAR
+        description: 商品ページURL
+      - name: release_date
+        type: DATE
+        description: 発売日
+      - name: stock_quantity
+        type: INTEGER
+        description: 在庫数
+      - name: has_bonus
+        type: BOOLEAN
+        description: 特典フラグ（TRUE=特典あり）
+      - name: bonus_description
+        type: VARCHAR
+        description: 特典内容
+      - name: sale_start_at
+        type: TIMESTAMP
+        description: 販売開始日時
+      - name: sale_end_at
+        type: TIMESTAMP
+        description: 販売終了日時
+      - name: is_active
+        type: BOOLEAN
+        description: 販売中フラグ
+
+  web_access_log:
+    description: Webアクセスログ（b→dash標準仕様準拠）
+    columns:
+      - name: webアクセスログID
+        type: テキスト
+        description: ログごとに付与されるID
+        pk: true
+      - name: ビジターID
+        type: テキスト
+        description: 訪問者ごとに付与されるID
+      - name: PV/Click
+        type: テキスト
+        description: PageViewとclickを判別
+        values: [PageView, click]
+      - name: PV/Click日時
+        type: 日時
+        description: ログが発生した日時（yyyy/MM/dd hh:mm:ss）
+      - name: セッションID
+        type: テキスト
+        description: セッションごとに付与されるID
+      - name: 年
+        type: 整数
+        description: PV/Click日時から年を抽出
+      - name: 月
+        type: 整数
+        description: PV/Click日時から月を抽出
+      - name: 日
+        type: 整数
+        description: PV/Click日時から日を抽出
+      - name: 曜日
+        type: テキスト
+        description: 曜日（英語表記）
+      - name: 時刻
+        type: 整数
+        description: PV/Click日時から時間を抽出
+      - name: 国
+        type: テキスト
+        description: 国名
+      - name: 地域
+        type: テキスト
+        description: 地域名
+      - name: 都市
+        type: テキスト
+        description: 都市名
+      - name: デバイスカテゴリ
+        type: テキスト
+        description: デバイスの種類
+      - name: OS
+        type: テキスト
+        description: OSの名称
+      - name: OSバージョン
+        type: テキスト
+        description: OSのバージョン
+      - name: ブラウザ
+        type: テキスト
+        description: ブラウザの名称
+      - name: ブラウザバージョン
+        type: テキスト
+        description: ブラウザバージョン
+      - name: IPアドレス
+        type: テキスト
+        description: IPアドレス
+      - name: ユーザーエージェント
+        type: テキスト
+        description: ユーザーエージェント
+      - name: リピーターフラグ
+        type: テキスト
+        description: 新規とリピーターを判別
+        values: [新規, リピーター]
+      - name: ドメイン
+        type: テキスト
+        description: ページのドメイン
+      - name: ページURL(パラメータ付き)
+        type: テキスト
+        description: ページのURL（パラメータ付き）
+      - name: ページURL
+        type: テキスト
+        description: ページのURL
+      - name: ページタイトル
+        type: テキスト
+        description: ページのタイトル
+      - name: 前ページURL
+        type: テキスト
+        description: 1つ前のページのURL
+      - name: 前ページURL(パラメータ付)
+        type: テキスト
+        description: 1つ前のページURL（パラメータ付き）
+      - name: ランディングページURL
+        type: テキスト
+        description: ランディングページURL
+      - name: ランディングページURL(パラメータ付)
+        type: テキスト
+        description: ランディングページURL（パラメータ付き）
+      - name: ランディングページタイトル
+        type: テキスト
+        description: ランディングページタイトル
+      - name: ランディングページフラグ
+        type: テキスト
+        description: ランディングページであるかどうかを判別
+      - name: 離脱ページURL
+        type: テキスト
+        description: 離脱したページのURL
+      - name: 離脱ページフラグ
+        type: テキスト
+        description: 離脱ページを判別
+      - name: 直帰フラグ
+        type: テキスト
+        description: 他ページに遷移せず離脱したかを判別
+      - name: イベント発生要素名
+        type: テキスト
+        description: Clickイベントが発生した要素のタグ名
+      - name: イベント発生要素id
+        type: テキスト
+        description: id属性の値
+      - name: イベント発生要素name
+        type: テキスト
+        description: name属性の値
+      - name: イベント発生要素class
+        type: テキスト
+        description: class属性の値
+      - name: イベント発生要素src
+        type: テキスト
+        description: src属性の値
+      - name: イベント発生要素href
+        type: テキスト
+        description: href属性の値
+      - name: イベントアクション
+        type: テキスト
+        description: Clickイベントの内容
+      - name: 流入元ドメイン
+        type: テキスト
+        description: 流入元サイトのドメイン
+      - name: 流入元URL
+        type: テキスト
+        description: 流入元ページのURL
+      - name: 流入元URL(パラメータ付)
+        type: テキスト
+        description: 流入元ページのURL（パラメータ付き）
+      - name: 流入チャネル
+        type: テキスト
+        description: ユーザーがどのチャネルから流入したか
+      - name: 広告ID
+        type: テキスト
+        description: 広告ID
+      - name: 広告種別
+        type: テキスト
+        description: 広告種別
+      - name: 広告ネットワーク
+        type: テキスト
+        description: 広告ネットワーク
+      - name: キャンペーン名
+        type: テキスト
+        description: キャンペーン名
+      - name: 広告グループ
+        type: テキスト
+        description: 広告グループ
+      - name: 広告名
+        type: テキスト
+        description: 広告名
+      - name: クリエイティブ名
+        type: テキスト
+        description: クリエイティブ名
+      - name: 広告キーワード
+        type: テキスト
+        description: 広告キーワード
+      - name: マッチタイプ
+        type: テキスト
+        description: マッチタイプ
+      - name: 広告見出し
+        type: テキスト
+        description: 広告見出し
+      - name: 広告文
+        type: テキスト
+        description: 広告文
+      - name: リンク先URL
+        type: テキスト
+        description: リンク先URL
+      - name: 広告パラメータ
+        type: テキスト
+        description: 広告パラメータ
+      - name: 広告代理店ID
+        type: テキスト
+        description: 広告代理店に付与されるID
+      - name: 広告代理店名
+        type: テキスト
+        description: 広告代理店名
+      - name: 配信ID
+        type: テキスト
+        description: 配信施策ごとに付与されるID
+      - name: 配信種別
+        type: テキスト
+        description: 配信の種類
+      - name: b→dash_ID
+        type: テキスト
+        description: 顧客ごとに付与されるID
+      - name: リレーション項目_1
+        type: テキスト
+        description: 顧客ID（ログイン時に格納）
+        fk: customers.customer_id
+        note: ログイン時のみ格納される。未ログインの場合はNULL
+      - name: リレーション項目_2
+        type: テキスト
+        description: 受注ID
+        fk: orders.order_id
+      - name: リレーション項目_3
+        type: テキスト
+        description: カスタム項目
+      - name: リレーション項目_4
+        type: テキスト
+        description: カスタム項目
+      - name: リレーション項目_5
+        type: テキスト
+        description: カスタム項目
+      - name: リレーション項目_6
+        type: テキスト
+        description: カスタム項目
+      - name: リレーション項目_7
+        type: テキスト
+        description: 商品ID
+        fk: products.product_id
+      - name: リレーション項目_10
+        type: テキスト
+        description: カート内商品ID（カンマ区切り）
+        fk: products.product_id（複数）
+        note: カートページPV型（パターン①）の場合のみ使用
+      - name: リレーション項目_8_9_11_to_50
+        type: テキスト
+        description: カスタム項目（企業ごとに定義）
+
+relations:
+  - from: orders.customer_id
+    to: customers.customer_id
+    type: N:1
+  - from: order_details.order_id
+    to: orders.order_id
+    type: N:1
+  - from: order_details.product_id
+    to: products.product_id
+    type: N:1
+  - from: web_access_log.リレーション項目_1
+    to: customers.customer_id
+    type: N:1
+    condition: ログイン時のみ
+  - from: web_access_log.リレーション項目_2
+    to: orders.order_id
+    type: N:1
+  - from: web_access_log.リレーション項目_7
+    to: products.product_id
+    type: N:1

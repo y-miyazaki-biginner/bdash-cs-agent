@@ -1,0 +1,51 @@
+company:
+  name: ""
+  industry: ""
+  site_type: ""  # EC / メディア / サービス等
+  channels: []   # メール / LINE / プッシュ通知 等
+
+data_rules:
+  cart_detection:
+    # パターン①: カートページPV型
+    #   カート投入後にカートページへ遷移するサイト向け
+    #   カートページのPVログ → リレーション項目_10（カンマ区切り商品ID）を参照
+    # パターン②: カート追加Click型
+    #   カート投入してもカートページに遷移しないサイト向け
+    #   商品詳細ページのClickログ → リレーション項目_7（商品ID）を参照
+    pattern: ""  # cart_page_pv | cart_add_click
+    cart_page_url_pattern: ""  # パターン①の場合: 例 /cart/
+    cart_add_element_class: "" # パターン②の場合: 例 add-to-cart-btn
+
+relation_mapping:
+  リレーション項目_1:
+    content: 顧客ID
+    fk: customers.customer_id
+  リレーション項目_2:
+    content: 受注ID
+    fk: orders.order_id
+  リレーション項目_7:
+    content: 商品ID
+    fk: products.product_id
+  リレーション項目_10:
+    content: ""  # パターン①の場合: カート内商品ID（カンマ区切り）
+    fk: ""
+
+global_exclusions:
+  # 全施策横断で適用する除外条件
+  # ここに定義された条件は、個別施策の除外条件に自動で追加される
+  - id: 1
+    condition: ""       # 例: メルマガ未許諾
+    table: ""           # 例: customers
+    column: ""          # 例: mail_permission
+    logic: ""           # 例: "= FALSE のユーザーを除外"
+
+operational_rules:
+  - ""  # 例: メール配信は10:00〜19:00のみ
+  - ""  # 例: A/Bテストを重視する
+  - ""  # 例: 特定カテゴリは配信対象外
+
+past_campaigns:
+  - name: ""
+    date: ""
+    result: ""
+    feedback: ""
