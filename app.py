@@ -362,7 +362,15 @@ try:
 except Exception:
     pass
 
-USE_GITHUB = bool(GITHUB_TOKEN and GITHUB_REPO)
+# トークンが有効なAPIキー形式かチェック（日本語等が入っていたら無効）
+def _is_valid_token(token):
+    try:
+        token.encode("latin-1")
+        return bool(token.strip())
+    except (UnicodeEncodeError, AttributeError):
+        return False
+
+USE_GITHUB = bool(_is_valid_token(GITHUB_TOKEN) and GITHUB_REPO)
 
 
 def _github_api(method, path, data=None):
