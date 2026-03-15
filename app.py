@@ -1019,14 +1019,18 @@ def call_agent(client, messages, agent_key):
     """Claude APIを呼び出し、ツール使用ループを処理する。"""
     agent = AGENTS[agent_key]
     while True:
-        response = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=8192,
-            system=agent["system_prompt"],
-            tools=agent["tools"],
-            thinking={"type": "enabled", "budget_tokens": 5000},
-            messages=messages,
-        )
+        try:
+            response = client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=8192,
+                system=agent["system_prompt"],
+                tools=agent["tools"],
+                thinking={"type": "enabled", "budget_tokens": 5000},
+                messages=messages,
+            )
+        except Exception as e:
+            st.error(f"API呼び出しエラー: {str(e)}")
+            return f"エラーが発生しました: {str(e)}", messages
 
         # レスポンス内容を処理
         assistant_content = response.content
