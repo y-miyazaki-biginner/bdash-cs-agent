@@ -199,35 +199,49 @@ tr:hover td {
     background: #eaf5fc;
 }
 
-/* --- 入力欄エリア --- */
-[data-testid="stChatInput"],
-[data-testid="stBottom"] > div {
+/* --- 入力欄エリア（外側含む全面） --- */
+[data-testid="stBottom"],
+[data-testid="stBottom"] > div,
+[data-testid="stBottom"] > div > div {
     background: #1B6478 !important;
-    border-radius: 16px !important;
-    padding: 8px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+}
+[data-testid="stBottom"] {
+    padding: 12px 16px !important;
+}
+[data-testid="stChatInput"] {
+    background: #1B6478 !important;
+    border-radius: 12px !important;
+    border: none !important;
+    padding: 4px !important;
 }
 [data-testid="stChatInput"] textarea,
 [data-testid="stBottom"] textarea {
     border-radius: 10px !important;
-    border: none !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
     font-size: 15px;
     padding: 12px 16px;
-    background: rgba(255,255,255,0.15) !important;
-    color: #fff !important;
+    background: rgba(255,255,255,0.95) !important;
+    color: #1a1a1a !important;
 }
 [data-testid="stChatInput"] textarea::placeholder,
 [data-testid="stBottom"] textarea::placeholder {
-    color: rgba(255,255,255,0.7) !important;
+    color: #6b7280 !important;
 }
 [data-testid="stChatInput"] textarea:focus,
 [data-testid="stBottom"] textarea:focus {
-    border: none !important;
-    background: rgba(255,255,255,0.22) !important;
+    border: 1px solid rgba(255,255,255,0.5) !important;
+    background: #fff !important;
     box-shadow: none !important;
+    color: #1a1a1a !important;
 }
 [data-testid="stChatInput"] button,
 [data-testid="stBottom"] button {
-    color: rgba(255,255,255,0.8) !important;
+    color: #fff !important;
+    background: rgba(255,255,255,0.2) !important;
+    border-radius: 8px !important;
 }
 
 /* --- 引き継ぎexpander --- */
