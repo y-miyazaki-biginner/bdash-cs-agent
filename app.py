@@ -114,6 +114,33 @@ html, body, [class*="css"] {
     border-radius: 6px !important;
 }
 
+/* --- サイドバー ファイルアップローダー --- */
+[data-testid="stSidebar"] [data-testid="stFileUploader"] {
+    background: rgba(255,255,255,0.9) !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+}
+[data-testid="stSidebar"] [data-testid="stFileUploader"] p,
+[data-testid="stSidebar"] [data-testid="stFileUploader"] span,
+[data-testid="stSidebar"] [data-testid="stFileUploader"] div,
+[data-testid="stSidebar"] [data-testid="stFileUploader"] small,
+[data-testid="stSidebar"] [data-testid="stFileUploader"] section {
+    color: #2c3e50 !important;
+}
+[data-testid="stSidebar"] [data-testid="stFileUploader"] button {
+    color: #0284C7 !important;
+    border-color: #0284C7 !important;
+}
+
+/* --- サイドバー セレクトボックス --- */
+[data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb] {
+    background: rgba(255,255,255,0.9) !important;
+    color: #2c3e50 !important;
+}
+[data-testid="stSidebar"] [data-testid="stSelectbox"] div[data-baseweb] * {
+    color: #2c3e50 !important;
+}
+
 /* --- メインエリア --- */
 .main .block-container {
     padding-top: 2rem;
