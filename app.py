@@ -200,29 +200,34 @@ tr:hover td {
 }
 
 /* --- 入力欄エリア --- */
-[data-testid="stChatInput"] {
+[data-testid="stChatInput"],
+[data-testid="stBottom"] > div {
     background: #1B6478 !important;
     border-radius: 16px !important;
     padding: 8px !important;
 }
-[data-testid="stChatInput"] textarea {
+[data-testid="stChatInput"] textarea,
+[data-testid="stBottom"] textarea {
     border-radius: 10px !important;
     border: none !important;
     font-size: 15px;
     padding: 12px 16px;
-    background: rgba(255,255,255,0.12) !important;
+    background: rgba(255,255,255,0.15) !important;
     color: #fff !important;
 }
-[data-testid="stChatInput"] textarea::placeholder {
-    color: rgba(255,255,255,0.5) !important;
+[data-testid="stChatInput"] textarea::placeholder,
+[data-testid="stBottom"] textarea::placeholder {
+    color: rgba(255,255,255,0.7) !important;
 }
-[data-testid="stChatInput"] textarea:focus {
+[data-testid="stChatInput"] textarea:focus,
+[data-testid="stBottom"] textarea:focus {
     border: none !important;
-    background: rgba(255,255,255,0.18) !important;
+    background: rgba(255,255,255,0.22) !important;
     box-shadow: none !important;
 }
-[data-testid="stChatInput"] button {
-    color: rgba(255,255,255,0.7) !important;
+[data-testid="stChatInput"] button,
+[data-testid="stBottom"] button {
+    color: rgba(255,255,255,0.8) !important;
 }
 
 /* --- 引き継ぎexpander --- */
